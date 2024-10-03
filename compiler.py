@@ -18,24 +18,27 @@ def interpret(code: list[str], indent=0) -> list[str]:
     indent can be set to automatically indent the generated C code. Useful when calling recursively, for example in nested loops.
     """
     finalCode = []
-    for i, line in code:
+    for i, line in enumerate(code):
         finalCode.append("")
         splitLine = line.split(" ")
-        for i in range(len(splitLine)):
-            currentCommand = splitLine[i]
+        for splitIndex in range(len(splitLine)):
+            currentCommand = splitLine[splitIndex]
             if currentCommand in atrCommands.keys():
                 finalCode[i] += atrCommands[currentCommand] + "(" #add the translated C command and the opening bracket
                 value = line.replace(")", "(").split("(")[1] #get the value of the function
                 if not value.startswith("\""): #allow other variable types than str to be printed as values
                     value = "\"" + value + "\""
                 finalCode[i] += value + ")"
-            finalCode[i] += ";"
+            finalCode[i] += ";\n"
+    
+    return finalCode
 
 
 with open("main.atr", "r") as f:
     lines = f.readlines()
     interpretedLines = interpret(lines)
-        
+    for line in interpretedLines:
+        cCode += line
 
 cCode += """
 return 0;
