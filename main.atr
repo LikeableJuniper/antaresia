@@ -1,4 +1,7 @@
-print (3) #inline comment
+#print (3)
+#
+var a = "hello world"
+print (a)
 #
 #func someFunc () {
 #    return 3
