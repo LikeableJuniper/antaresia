@@ -11,11 +11,12 @@ cCode = ["#include <stdio.h>\n", "\n"]
 #dictionary assigning atr functions to their C counterparts
 atrCommands = {"print": "printf"}
 
-#list containing all assigned variable names
-definedVariables = []
+#dictionary containing all variable format specifiers
+formatSpecifierTable = {"char": "c", "int": "i", "float": "f"}
 
 
 def interpret(code: list[str], indent=0) -> tuple[list[str], list[str]]:
+    global formatSpecifierTable
     """
     Compiles atr code to C code, taking in a list of strings, the lines of atr code, and returning lines of c code.
     indent can be set to automatically indent the generated C code. Useful when calling recursively, for example in nested loops.
@@ -23,6 +24,7 @@ def interpret(code: list[str], indent=0) -> tuple[list[str], list[str]]:
     #all defined functions need to be added before the main function in the C code
     functions: list[str] = []
     finalCode: list[str] = []
+    variables: dict[str: str] = {}
 
     commentLines = 0 #counting the amount of full line comments that were removed from the list to subtract from lineIndex
 
@@ -67,10 +69,12 @@ def interpret(code: list[str], indent=0) -> tuple[list[str], list[str]]:
                     varType = "char"
                 elif value.startswith("\""):
                     #there is a special syntax for "strings" in C, consisting of an array of char elements
-                    finalCode[currentIndex] += "char {}[{}] = {}".format(splitLine[1], stringLength, value)
+                    finalCode[currentIndex] += "char {}[] = {}".format(splitLine[1], value)
+                    variables[splitLine[1]] = "s" #C requires a format specifier for every variable to be printed correctly
                 
                 if varType:
                     finalCode[currentIndex] += "{} {} = {}".format(varType, splitLine[1], value)
+                    variables[splitLine[1]] = formatSpecifierTable[varType]
 
         
         if not skipLine:
