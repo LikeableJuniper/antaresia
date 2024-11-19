@@ -14,6 +14,9 @@ atrCommands = {"print": "printf"}
 #dictionary containing all variable format specifiers
 formatSpecifierTable = {"char": "c", "int": "i", "float": "f"}
 
+#the amount of spaces to use for indent in translated C code
+indentAmount = 4
+
 
 def interpret(code: list[str], indent=0) -> tuple[list[str], list[str]]:
     global formatSpecifierTable
@@ -42,6 +45,16 @@ def interpret(code: list[str], indent=0) -> tuple[list[str], list[str]]:
                 splitLine[-1] = splitLine[-1][:-1]
             
             currentCommand = splitLine[splitIndex]
+
+            if currentCommand == "func":
+                currentFunction = ["int {}()".format(splitLine[1]) + " {\n"]
+                for functionLine in interpret(code[currentIndex+1:], indent+4)[1]:
+                    currentFunction.append(functionLine)
+                print(currentFunction)
+                exit()
+            
+            if currentCommand == "}":
+                break
 
             if currentCommand.startswith("#"): #skip comments
                 if splitLine[0].startswith("#"): #completely ignore line if it was a comment
@@ -82,13 +95,13 @@ def interpret(code: list[str], indent=0) -> tuple[list[str], list[str]]:
                 finalCode[currentIndex] += ";"
             finalCode[currentIndex] += "\n"
     
-    return functions, finalCode
+    return functions, finalCode, lineIndex
 
 
 #compile all the lines in main.atr
 with open("main.atr", "r") as f:
     lines = f.readlines()
-    functions, interpretedLines = interpret(lines, indent=4)
+    functions, interpretedLines, _ = interpret(lines, indent=4)
     cCode += functions
     cCode += "int main() {\n"
     cCode += interpretedLines
