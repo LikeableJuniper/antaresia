@@ -31,10 +31,15 @@ def interpret(code: list[str], indent=0) -> tuple[list[str], list[str]]:
 
     commentLines = 0 #counting the amount of full line comments that were removed from the list to subtract from lineIndex
 
+    functionLineShift = 0 #lines in functions to be added to lineIndex
+
     for lineIndex, line in enumerate(code):
-        finalCode.append(" "*indent) #add indent
-        currentIndex = lineIndex - commentLines
+        finalCode.append(" "*indent*4) #add indent
+        currentIndex = lineIndex + functionLineShift - commentLines
         splitLine = line.split(" ")
+        while not splitLine[0]:
+            splitLine = splitLine[1:]
+        
         for splitIndex in range(len(splitLine)):
             skipLine = False
 
@@ -47,14 +52,18 @@ def interpret(code: list[str], indent=0) -> tuple[list[str], list[str]]:
             currentCommand = splitLine[splitIndex]
 
             if currentCommand == "func":
-                currentFunction = ["int {}()".format(splitLine[1]) + " {\n"]
-                for functionLine in interpret(code[currentIndex+1:], indent+4)[1]:
-                    currentFunction.append(functionLine)
-                print(currentFunction)
-                exit()
+                finalCode[currentIndex] += "int {}()".format(splitLine[1]) + " {\n"
+                _, functionCode, lineShift = interpret(code[lineIndex+1:], indent+1, verbose=True)
+                for functionLine in functionCode[1]:
+                    finalCode.append(" "*indentAmount*indent + functionLine)
+                functionLineShift += lineShift
+                
             
             if currentCommand == "}":
                 break
+
+            if currentCommand == "return":
+                finalCode[currentIndex] += "return {}".format(splitLine[1])
 
             if currentCommand.startswith("#"): #skip comments
                 if splitLine[0].startswith("#"): #completely ignore line if it was a comment
@@ -101,7 +110,7 @@ def interpret(code: list[str], indent=0) -> tuple[list[str], list[str]]:
 #compile all the lines in main.atr
 with open("main.atr", "r") as f:
     lines = f.readlines()
-    functions, interpretedLines, _ = interpret(lines, indent=4)
+    functions, interpretedLines, _ = interpret(lines, indent=1)
     cCode += functions
     cCode += "int main() {\n"
     cCode += interpretedLines
