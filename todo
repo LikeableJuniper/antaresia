@@ -1,4 +1,5 @@
-- Add functions to atr
 - Add variable assigning and usage
- - Add parameters
+- Functions
+    - Add parameters
+    - Add function calling in atr
 - Add loops
