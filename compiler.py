@@ -18,7 +18,7 @@ formatSpecifierTable = {"char": "c", "int": "i", "float": "f"}
 indentAmount = 4
 
 
-def interpret(code: list[str], indent=0) -> tuple[list[str], list[str]]:
+def interpret(code: list[str], indent=0) -> tuple[list[str], list[str], int]:
     global formatSpecifierTable
     """
     Compiles atr code to C code, taking in a list of strings, the lines of atr code, and returning lines of c code.
@@ -29,14 +29,14 @@ def interpret(code: list[str], indent=0) -> tuple[list[str], list[str]]:
     finalCode: list[str] = []
     variables: dict[str: str] = {}
 
-    commentLines = 0 #counting the amount of full line comments that were removed from the list to subtract from lineIndex
-
     functionLineShift = 0 #lines in functions to be added to lineIndex
 
     for lineIndex, line in enumerate(code):
-        finalCode.append(" "*indent*4) #add indent
-        currentIndex = lineIndex + functionLineShift - commentLines
+        currentIndex = lineIndex + functionLineShift
+        if lineIndex < currentIndex: #skip lines already interpreted in recursive calls as functions
+            continue
         splitLine = line.split(" ")
+        finalCode.append(" "*indent*4) #add indent
         while not splitLine[0]:
             splitLine = splitLine[1:]
         
@@ -52,32 +52,32 @@ def interpret(code: list[str], indent=0) -> tuple[list[str], list[str]]:
             currentCommand = splitLine[splitIndex]
 
             if currentCommand == "func":
-                finalCode[currentIndex] += "int {}()".format(splitLine[1]) + " {\n"
-                _, functionCode, lineShift = interpret(code[lineIndex+1:], indent+1, verbose=True)
-                for functionLine in functionCode[1]:
-                    finalCode.append(" "*indentAmount*indent + functionLine)
-                functionLineShift += lineShift
+                functions.append("int {}()".format(splitLine[1]) + " {\n")
+                _, functionCode, lineShift = interpret(code[lineIndex+1:], 1) #recursive call enables functions and loops to be interpreted easily
+                for functionLine in functionCode:
+                    functions.append(functionLine)
+                functionLineShift += lineShift+2
                 
             
             if currentCommand == "}":
                 break
 
             if currentCommand == "return":
-                finalCode[currentIndex] += "return {}".format(splitLine[1])
+                finalCode[-1] += "return {};\n".format(splitLine[1])
+                finalCode.append("}")
 
             if currentCommand.startswith("#"): #skip comments
                 if splitLine[0].startswith("#"): #completely ignore line if it was a comment
                     skipLine = True
                     finalCode.pop()
-                    commentLines += 1
                 break
 
             if currentCommand in atrCommands.keys():
-                finalCode[currentIndex] += atrCommands[currentCommand] + "(" #add the translated C command and the opening bracket
+                finalCode[-1] += atrCommands[currentCommand] + "(" #add the translated C command and the opening bracket
                 value = line.replace(")", "(").split("(")[1] #get the parameter of the function
                 #if not value.startswith("\""): #allow other data types than str to be printed as values
                 #    value = "\"" + value + "\""
-                finalCode[currentIndex] += value + ")"
+                finalCode[-1] += value + ")"
         
             elif currentCommand == "var" and splitLine[0].startswith("var"):
                 value = splitLine[3:]
@@ -91,18 +91,18 @@ def interpret(code: list[str], indent=0) -> tuple[list[str], list[str]]:
                     varType = "char"
                 elif value.startswith("\""):
                     #there is a special syntax for "strings" in C, consisting of an array of char elements
-                    finalCode[currentIndex] += "char {}[] = {}".format(splitLine[1], value)
+                    finalCode[-1] += "char {}[] = {}".format(splitLine[1], value)
                     variables[splitLine[1]] = "s" #C requires a format specifier for every variable to be printed correctly
                 
                 if varType:
-                    finalCode[currentIndex] += "{} {} = {}".format(varType, splitLine[1], value)
+                    finalCode[-1] += "{} {} = {}".format(varType, splitLine[1], value)
                     variables[splitLine[1]] = formatSpecifierTable[varType]
 
         
         if not skipLine:
-            if len(finalCode[currentIndex].replace(" ", "")): #if there was no (translatable) content on the line, do not add semicolon
-                finalCode[currentIndex] += ";"
-            finalCode[currentIndex] += "\n"
+            if len(finalCode[-1].replace(" ", "")): #if there was no (translatable) content on the line, do not add semicolon
+                finalCode[-1] += ";"
+            finalCode[-1] += "\n"
     
     return functions, finalCode, lineIndex
 
@@ -111,6 +111,7 @@ def interpret(code: list[str], indent=0) -> tuple[list[str], list[str]]:
 with open("main.atr", "r") as f:
     lines = f.readlines()
     functions, interpretedLines, _ = interpret(lines, indent=1)
+    print(functions, interpretedLines, _)
     cCode += functions
     cCode += "int main() {\n"
     cCode += interpretedLines
