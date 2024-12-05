@@ -1,8 +1,8 @@
-#print (3)
-#
-#var a = "hello world"
-#print (a)
-#
+print (3)
+
+var a = "hello world"
+print (a)
+
 func someFunc () {
     return -1
 }
