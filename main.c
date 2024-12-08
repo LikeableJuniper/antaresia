@@ -5,6 +5,11 @@ int someFunc() {
 };
     
 int main() {
+    printf(3);
+    
+    char a[] = "hello world";
+    printf(a);
+    
     
     return 0;
 }

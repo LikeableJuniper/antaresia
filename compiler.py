@@ -75,8 +75,6 @@ def interpret(code: list[str], indent=0) -> tuple[list[str], list[str], int]:
             if currentCommand in atrCommands.keys():
                 finalCode[-1] += atrCommands[currentCommand] + "(" #add the translated C command and the opening bracket
                 value = line.replace(")", "(").split("(")[1] #get the parameter of the function
-                #if not value.startswith("\""): #allow other data types than str to be printed as values
-                #    value = "\"" + value + "\""
                 finalCode[-1] += value + ")"
         
             elif currentCommand == "var" and splitLine[0].startswith("var"):
@@ -87,7 +85,7 @@ def interpret(code: list[str], indent=0) -> tuple[list[str], list[str], int]:
                 value = finalValue
                 varType = None
 
-                if value.startswith("\"") and (stringLength := len(value.replace("\"", ""))) == 1:
+                if value.startswith("\"") and len(value.replace("\"", "")) == 1:
                     varType = "char"
                 elif value.startswith("\""):
                     #there is a special syntax for "strings" in C, consisting of an array of char elements
