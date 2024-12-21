@@ -2,7 +2,7 @@
 
 int someFunc() {
     return -1;
-};
+}
     
 int main() {
     printf(3);

@@ -65,6 +65,7 @@ def interpret(code: list[str], indent=0) -> tuple[list[str], list[str], int]:
             if currentCommand == "return":
                 finalCode[-1] += "return {};\n".format(splitLine[1])
                 finalCode.append("}")
+                print(currentCommand)
 
             if currentCommand.startswith("#"): #skip comments
                 if splitLine[0].startswith("#"): #completely ignore line if it was a comment
@@ -98,7 +99,7 @@ def interpret(code: list[str], indent=0) -> tuple[list[str], list[str], int]:
 
         
         if not skipLine:
-            if len(finalCode[-1].replace(" ", "")): #if there was no (translatable) content on the line, do not add semicolon
+            if len(finalCode[-1].replace(" ", "")) and ("}" not in finalCode[-1]): #if there was no (translatable) content on the line, do not add semicolon
                 finalCode[-1] += ";"
             finalCode[-1] += "\n"
     
@@ -109,7 +110,6 @@ def interpret(code: list[str], indent=0) -> tuple[list[str], list[str], int]:
 with open("main.atr", "r") as f:
     lines = f.readlines()
     functions, interpretedLines, _ = interpret(lines, indent=1)
-    print(functions, interpretedLines, _)
     cCode += functions
     cCode += "int main() {\n"
     cCode += interpretedLines
