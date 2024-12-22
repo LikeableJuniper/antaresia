@@ -12,10 +12,13 @@ cCode = ["#include <stdio.h>\n", "\n"]
 atrCommands = {"print": "printf"}
 
 #dictionary containing all variable format specifiers
-formatSpecifierTable = {"char": "c", "int": "i", "float": "f"}
+formatSpecifierTable = {"char": "c", "int": "i", "float": "f", "string": "s"}
 
 #the amount of spaces to use for indent in translated C code
 indentAmount = 4
+
+#tuple of digits to check the format of a value when printing (special syntax required when printing numbers)
+digits = ("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")
 
 
 def interpret(code: list[str], indent=0) -> tuple[list[str], list[str], int]:
@@ -76,12 +79,27 @@ def interpret(code: list[str], indent=0) -> tuple[list[str], list[str], int]:
             if currentCommand in atrCommands.keys():
                 finalCode[-1] += atrCommands[currentCommand] + "(" #add the translated C command and the opening bracket
                 value = line.replace(")", "(").split("(")[1] #get the parameter of the function
+
+                if value.startswith(("\"", "'")):
+                    if len(value) == 3: #if length of value is 3 (including " or '), it's a character
+                        varType = "char"
+                    else:
+                        varType = "string"
+                elif value.startswith(digits):
+                    if "." in value:
+                        varType = "float"
+                    else:
+                        varType = "int"
+                
+                value = "\"%{}".format(formatSpecifierTable[varType]) + r'\n", ' + f"{value}" #r before string makes escape characters (\) be accepted as normal characters instead of actual escape characters
+
                 finalCode[-1] += value + ")"
         
             elif currentCommand == "var" and splitLine[0].startswith("var"):
                 value = splitLine[3:]
                 finalValue = splitLine[3]
-                while len(value) > 1: #in case the value to be assigned contained a space (for example in strings), keep adding the rest of the line together until the full value is reached
+                #in case the value to be assigned contained a space (for example in strings), keep adding the rest of the line together until the full value is reached
+                while len(value) > 1:
                     finalValue += " " + value.pop(1)
                 value = finalValue
                 varType = None
