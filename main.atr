@@ -1,9 +1,13 @@
-print (4.5)
+#print (4.5)
 
-var a = "hello world"
-print (a)
+#var a = "hello world"
+#print (a)
 #
-#func someFunc () {
-#    return -1
-#}
+func someFunc () {
+    print (-1)
+#    var b = "hey"
+#    print (b)
+    return -1
+}
 #
+#someFunc ()

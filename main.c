@@ -1,9 +1,11 @@
 #include <stdio.h>
 
-int main() {
-    printf("%f\n", 4.5);
+int someFunc() {
+    printf("%i\n", -1);
+    return -1;
+}
     
-    char a[] = "hello world";
-    printf("%s\n", a);
+int main() {
+    
     return 0;
 }

@@ -88,7 +88,7 @@ def interpret(code: list[str], indent=0) -> tuple[list[str], list[str], int]:
                         varType = "char"
                     else:
                         varType = "string"
-                elif value.startswith(digits):
+                elif value.startswith(digits + ("-",)):
                     if "." in value:
                         varType = "float"
                     else:
