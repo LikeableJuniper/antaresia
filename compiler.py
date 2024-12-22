@@ -80,7 +80,10 @@ def interpret(code: list[str], indent=0) -> tuple[list[str], list[str], int]:
                 finalCode[-1] += atrCommands[currentCommand] + "(" #add the translated C command and the opening bracket
                 value = line.replace(")", "(").split("(")[1] #get the parameter of the function
 
-                if value.startswith(("\"", "'")):
+                if value in variables:
+                    varType = variables[value]
+
+                elif value.startswith(("\"", "'")):
                     if len(value) == 3: #if length of value is 3 (including " or '), it's a character
                         varType = "char"
                     else:
@@ -109,11 +112,11 @@ def interpret(code: list[str], indent=0) -> tuple[list[str], list[str], int]:
                 elif value.startswith("\""):
                     #there is a special syntax for "strings" in C, consisting of an array of char elements
                     finalCode[-1] += "char {}[] = {}".format(splitLine[1], value)
-                    variables[splitLine[1]] = "s" #C requires a format specifier for every variable to be printed correctly
+                    variables[splitLine[1]] = "string" #C requires a format specifier for every variable to be printed correctly
                 
                 if varType:
                     finalCode[-1] += "{} {} = {}".format(varType, splitLine[1], value)
-                    variables[splitLine[1]] = formatSpecifierTable[varType]
+                    variables[splitLine[1]] = varType
 
         
         if not skipLine:
