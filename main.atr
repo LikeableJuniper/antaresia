@@ -3,8 +3,9 @@
 #var a = "hello world"
 #print (a)
 #
-func someFunc (someArg: str) {
-    print (someArg)
+func someFunc (firstArg: int, secondArg: int) {
+    print (firstArg)
+    print (secondArg)
     print (-1)
 #    var b = "hey"
 #    print (b)

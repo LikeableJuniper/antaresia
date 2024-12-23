@@ -57,16 +57,35 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
 
             if currentCommand == "func":
                 functionName = splitLine[1]
-                argList = splitLine[2].replace(")", "").replace("(", "").split(",") #this takes all the arguments in the brackets in .atr and splits them at commas
-                stringArguments = ""
-                for i, argument in enumerate(argList):
-                    stringArguments += argument
-                    if i != len(argList) - 1:
-                        stringArguments += "," #append comma only if this isn't the last argument
+                argList = ""
+                for i in range(len(splitLine[2:-1])):
+                    argList += splitLine[2+i]
                 
-                functions.append("int {}({})".format(functionName, ) + " {\n")
+                argList = argList.replace(")", "").replace("(", "").split(",") #this takes all the arguments in the brackets in .atr and splits them at commas
+                stringArguments = ""
+                dictArguments = {}
+                functionDefinition = "int {}(".format(functionName)
+
+                for i, argument in enumerate(argList):
+                    argumentName, argumentType = argument.replace(" ", "").split(":")
+                    stringArguments += argumentName
+                    
+                    dictArguments[argumentName] = argumentType
+
+                    if argumentType == "string":
+                        functionDefinition += "char {}[]".format(argumentName)
+                    else:
+                        functionDefinition += "{} {}".format(argumentType, argumentName)
+
+                    if i != len(argList) - 1:
+                        stringArguments += ", " #append comma only if this isn't the last argument
+                        functionDefinition += ", "
+                    else:
+                        functionDefinition += ")"
+                
+                functions.append(functionDefinition + " {\n")
                 definedFunctions.append(functionName)
-                _, functionCode, lineShift = interpret(code[lineIndex+1:], 1, arguments=functionArguments) #recursive call enables functions and loops to be interpreted easily
+                _, functionCode, lineShift = interpret(code[lineIndex+1:], 1, arguments=dictArguments) #recursive call enables functions and loops to be interpreted easily
                 for functionLine in functionCode:
                     functions.append(functionLine)
                 functionLineShift += lineShift+2
@@ -77,7 +96,6 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
             if currentCommand == "return":
                 finalCode[-1] += "return {};\n".format(splitLine[1])
                 finalCode.append("}")
-                print(currentCommand)
 
             if currentCommand.startswith("#"): #skip comments
                 if splitLine[0].startswith("#"): #completely ignore line if it was a comment
@@ -94,7 +112,7 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
 
                 elif value in variableTypes:
                     varType = variableTypes[value]
-
+                
                 elif value.startswith(("\"", "'")):
                     if len(value) == 3: #if length of value is 3 (including " or '), it's a character
                         varType = "char"
@@ -105,7 +123,7 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
                         varType = "float"
                     else:
                         varType = "int"
-                
+
                 value = "\"%{}".format(formatSpecifierTable[varType]) + r'\n", ' + f"{value}" #r before string makes escape characters (\) be accepted as normal characters instead of actual escape characters
 
                 finalCode[-1] += value + ")"
