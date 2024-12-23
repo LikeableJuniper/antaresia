@@ -21,7 +21,7 @@ indentAmount = 4
 digits = ("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")
 
 
-def interpret(code: list[str], indent=0) -> tuple[list[str], list[str], int]:
+def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[list[str], list[str], int]:
     global formatSpecifierTable
     """
     Compiles atr code to C code, taking in a list of strings, the lines of atr code, and returning lines of c code.
@@ -30,7 +30,8 @@ def interpret(code: list[str], indent=0) -> tuple[list[str], list[str], int]:
     #all defined functions need to be added before the main function in the C code
     functions: list[str] = []
     finalCode: list[str] = []
-    variables: dict[str: str] = {}
+    variableTypes: dict[str: str] = {}
+    definedFunctions: list[str] = []
 
     functionLineShift = 0 #lines in functions to be added to lineIndex
 
@@ -55,12 +56,20 @@ def interpret(code: list[str], indent=0) -> tuple[list[str], list[str], int]:
             currentCommand = splitLine[splitIndex]
 
             if currentCommand == "func":
-                functions.append("int {}()".format(splitLine[1]) + " {\n")
-                _, functionCode, lineShift = interpret(code[lineIndex+1:], 1) #recursive call enables functions and loops to be interpreted easily
+                functionName = splitLine[1]
+                argList = splitLine[2].replace(")", "").replace("(", "").split(",") #this takes all the arguments in the brackets in .atr and splits them at commas
+                stringArguments = ""
+                for i, argument in enumerate(argList):
+                    stringArguments += argument
+                    if i != len(argList) - 1:
+                        stringArguments += "," #append comma only if this isn't the last argument
+                
+                functions.append("int {}({})".format(functionName, ) + " {\n")
+                definedFunctions.append(functionName)
+                _, functionCode, lineShift = interpret(code[lineIndex+1:], 1, arguments=functionArguments) #recursive call enables functions and loops to be interpreted easily
                 for functionLine in functionCode:
                     functions.append(functionLine)
                 functionLineShift += lineShift+2
-                
             
             if currentCommand == "}":
                 break
@@ -80,8 +89,11 @@ def interpret(code: list[str], indent=0) -> tuple[list[str], list[str], int]:
                 finalCode[-1] += atrCommands[currentCommand] + "(" #add the translated C command and the opening bracket
                 value = line.replace(")", "(").split("(")[1] #get the parameter of the function
 
-                if value in variables:
-                    varType = variables[value]
+                if value in arguments:
+                    varType = arguments[value]
+
+                elif value in variableTypes:
+                    varType = variableTypes[value]
 
                 elif value.startswith(("\"", "'")):
                     if len(value) == 3: #if length of value is 3 (including " or '), it's a character
@@ -112,11 +124,11 @@ def interpret(code: list[str], indent=0) -> tuple[list[str], list[str], int]:
                 elif value.startswith("\""):
                     #there is a special syntax for "strings" in C, consisting of an array of char elements
                     finalCode[-1] += "char {}[] = {}".format(splitLine[1], value)
-                    variables[splitLine[1]] = "string" #C requires a format specifier for every variable to be printed correctly
+                    variableTypes[splitLine[1]] = "string" #C requires a format specifier for every variable to be printed correctly
                 
                 if varType:
                     finalCode[-1] += "{} {} = {}".format(varType, splitLine[1], value)
-                    variables[splitLine[1]] = varType
+                    variableTypes[splitLine[1]] = varType
 
         
         if not skipLine:

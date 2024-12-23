@@ -3,7 +3,8 @@
 #var a = "hello world"
 #print (a)
 #
-func someFunc () {
+func someFunc (someArg: str) {
+    print (someArg)
     print (-1)
 #    var b = "hey"
 #    print (b)
