@@ -1,15 +1,12 @@
 #include <stdio.h>
 
-int someFunc() {
-    int res = 1;
+float someFunc() {
+    float res = 3.5;
     return res;
 }
 
 int main() {
-    ();
-    ();
-    ();
-    int x = someFunc();
-    printf("%i\n", x);
+    float x = someFunc();
+    printf("%f\n", x);
     return 0;
 }

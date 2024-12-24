@@ -46,7 +46,7 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
     functions: list[str] = []
     finalCode: list[str] = []
     variableTypes: dict[str: str] = {}
-    definedFunctions: dict[str: str] = {"": ""}
+    definedFunctions: dict[str: str] = {}
 
     functionLineShift = 0 #lines in functions to be added to lineIndex
     targetIndex = 0
@@ -69,7 +69,7 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
             
             if splitLine[-1].endswith("\n"): #remove newlines at the end of lines
                 splitLine[-1] = splitLine[-1][:-1]
-            
+
             currentCommand = splitLine[splitIndex]
 
             if currentCommand == "func":
@@ -81,7 +81,8 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
                 argList = argList.replace(")", "").replace("(", "").split(",") #this takes all the arguments in the brackets in .atr and splits them at commas
                 stringArguments = ""
                 dictArguments = {}
-                functionDefinition = "int {}(".format(functionName)
+                returnType = splitLine[-2]
+                functionDefinition = "{} {}(".format(returnType, functionName)
 
                 if argList[0]: #only search for arguments if there are any
                     for i, argument in enumerate(argList):
@@ -171,8 +172,10 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
                 
                 elif value in definedFunctions.keys():
                     varType = definedFunctions[value]
-                    finalCode[-1] += "{} {} = {};\n".format(varType, splitLine[1], splitLine[3]+splitLine[4])
-                    print("After adding value: {}".format(finalCode[-1]))
+                    if varType == "string":
+                        finalCode[-1] += "char {}[] = {};\n".format(splitLine[1], splitLine[3]+splitLine[4])
+                    else:
+                        finalCode[-1] += "{} {} = {};\n".format(varType, splitLine[1], splitLine[3]+splitLine[4])
                     skipToNextLine = True
 
                 elif value.startswith("\""):
@@ -183,7 +186,7 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
                 elif any((sign in value) for sign in mathSigns): #if there is any mathematical sign and the value isn't a string, interpret value as math
                     pass
                 
-                elif value.startswith(digits) and not "." in value:
+                elif value.startswith(digits):
                     if "." in value:
                         varType = "float"
                     else:
@@ -197,9 +200,7 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
 
             if skipToNextLine:
                 break
-        
-        print(lineIndex, finalCode)
-        print("interpretation of line: \n{}".format(line))
+
         if not skipToNextLine:
             if len(finalCode[-1].replace(" ", "")) and ("}" not in finalCode[-1]): #if there was no (translatable) content on the line, do not add semicolon
                 finalCode[-1] += ";"

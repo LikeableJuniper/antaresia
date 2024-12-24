@@ -1,9 +1,6 @@
-func someFunc () -> int {
-    var res = 1
+func someFunc () -> float {
+    var res = 3.5
     return res
 }
-
-
-
 var x = someFunc ()
 print (x)
