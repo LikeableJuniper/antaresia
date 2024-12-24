@@ -1,15 +1,9 @@
-#print (4.5)
-
-#var a = "hello world"
-#print (a)
-#
 func someFunc (firstArg: int, secondArg: int) {
     print (firstArg)
     print (secondArg)
     print (-1)
-#    var b = "hey"
-#    print (b)
     return -1
 }
-#
-#someFunc ()
+print ("hello")
+someFunc (3, 6)
+print ("world")

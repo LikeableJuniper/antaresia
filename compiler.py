@@ -34,10 +34,13 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
     definedFunctions: list[str] = []
 
     functionLineShift = 0 #lines in functions to be added to lineIndex
+    targetIndex = 0
+
+    endFunction = False
 
     for lineIndex, line in enumerate(code):
         currentIndex = lineIndex + functionLineShift
-        if lineIndex < currentIndex: #skip lines already interpreted in recursive calls as functions
+        if lineIndex < targetIndex: #skip lines already interpreted in recursive calls as functions
             continue
         splitLine = line.split(" ")
         finalCode.append(" "*indent*4) #add indent
@@ -45,12 +48,12 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
             splitLine = splitLine[1:]
         
         for splitIndex in range(len(splitLine)):
-            skipLine = False
+            skipToNextLine = False
 
             while splitLine[0] == " ": #remove indents at the start of line
                 splitLine = splitLine[1:]
             
-            if splitLine[-1].endswith("\n"):
+            if splitLine[-1].endswith("\n"): #remove newlines at the end of lines
                 splitLine[-1] = splitLine[-1][:-1]
             
             currentCommand = splitLine[splitIndex]
@@ -84,22 +87,30 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
                         functionDefinition += ")"
                 
                 functions.append(functionDefinition + " {\n")
+                print("new function defined: {}".format(functionName))
                 definedFunctions.append(functionName)
                 _, functionCode, lineShift = interpret(code[lineIndex+1:], 1, arguments=dictArguments) #recursive call enables functions and loops to be interpreted easily
+                print("out of function interpret with lineshift {}. Current Index: {}".format(lineShift, lineIndex))
                 for functionLine in functionCode:
                     functions.append(functionLine)
                 functionLineShift += lineShift+2
+                targetIndex = lineIndex + functionLineShift
+                del finalCode[-1] #since no line in main code is needed, remove already added indents
+                skipToNextLine = True
             
             if currentCommand == "}":
+                print("end of function")
+                endFunction = True
                 break
 
             if currentCommand == "return":
                 finalCode[-1] += "return {};\n".format(splitLine[1])
-                finalCode.append("}")
+                finalCode.append("}\n")
+                skipToNextLine = True
 
             if currentCommand.startswith("#"): #skip comments
                 if splitLine[0].startswith("#"): #completely ignore line if it was a comment
-                    skipLine = True
+                    skipToNextLine = True
                     finalCode.pop()
                 break
 
@@ -107,27 +118,36 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
                 finalCode[-1] += atrCommands[currentCommand] + "(" #add the translated C command and the opening bracket
                 value = line.replace(")", "(").split("(")[1] #get the parameter of the function
 
-                if value in arguments:
-                    varType = arguments[value]
+                if currentCommand == "print":
+                    if value in arguments:
+                        varType = arguments[value]
 
-                elif value in variableTypes:
-                    varType = variableTypes[value]
-                
-                elif value.startswith(("\"", "'")):
-                    if len(value) == 3: #if length of value is 3 (including " or '), it's a character
-                        varType = "char"
-                    else:
-                        varType = "string"
-                elif value.startswith(digits + ("-",)):
-                    if "." in value:
-                        varType = "float"
-                    else:
-                        varType = "int"
+                    elif value in variableTypes:
+                        varType = variableTypes[value]
+                    
+                    elif value.startswith(("\"", "'")):
+                        if len(value) == 3: #if length of value is 3 (including " or '), it's a character
+                            varType = "char"
+                        else:
+                            varType = "string"
+                    elif value.startswith(digits + ("-",)):
+                        if "." in value:
+                            varType = "float"
+                        else:
+                            varType = "int"
 
-                value = "\"%{}".format(formatSpecifierTable[varType]) + r'\n", ' + f"{value}" #r before string makes escape characters (\) be accepted as normal characters instead of actual escape characters
+                    value = "\"%{}".format(formatSpecifierTable[varType]) + r'\n", ' + f"{value}" #r before string makes escape characters (\) be accepted as normal characters instead of actual escape characters
 
-                finalCode[-1] += value + ")"
+                finalCode[-1] += value + ");\n"
+                skipToNextLine = True
         
+            elif currentCommand in definedFunctions:
+                print("found function {}".format(currentCommand))
+                functionCallArguments = splitLine[1].replace("(", "").replace(")", "")
+                #TODO: add all arguments when multiple are present
+                finalCode[-1] += "{}({});\n".format(currentCommand, functionCallArguments)
+                skipToNextLine = True
+
             elif currentCommand == "var" and splitLine[0].startswith("var"):
                 value = splitLine[3:]
                 finalValue = splitLine[3]
@@ -141,18 +161,25 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
                     varType = "char"
                 elif value.startswith("\""):
                     #there is a special syntax for "strings" in C, consisting of an array of char elements
-                    finalCode[-1] += "char {}[] = {}".format(splitLine[1], value)
+                    finalCode[-1] += "char {}[] = {};\n".format(splitLine[1], value)
                     variableTypes[splitLine[1]] = "string" #C requires a format specifier for every variable to be printed correctly
                 
                 if varType:
-                    finalCode[-1] += "{} {} = {}".format(varType, splitLine[1], value)
+                    finalCode[-1] += "{} {} = {};\n".format(varType, splitLine[1], value)
                     variableTypes[splitLine[1]] = varType
+                
+                skipToNextLine = True
 
+            if skipToNextLine:
+                break
         
-        if not skipLine:
+        if not skipToNextLine:
             if len(finalCode[-1].replace(" ", "")) and ("}" not in finalCode[-1]): #if there was no (translatable) content on the line, do not add semicolon
                 finalCode[-1] += ";"
             finalCode[-1] += "\n"
+        
+        if endFunction:
+            break
     
     return functions, finalCode, lineIndex
 

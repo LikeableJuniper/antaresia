@@ -8,7 +8,8 @@ int someFunc(int firstArg, int secondArg) {
 }
     
 int main() {
-    
-    someFunc(3, -2);
+    printf("%s\n", "hello");
+    someFunc(3,);
+    printf("%s\n", "world");
     return 0;
 }
