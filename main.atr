@@ -1,9 +1,9 @@
-func someFunc (firstArg: int, secondArg: int) {
-    print (firstArg)
-    print (secondArg)
-    print (-1)
-    return -1
+func someFunc () -> int {
+    var res = 1
+    return res
 }
-print ("hello")
-someFunc (3, 6, 7, 3, -2)
-print ("world")
+
+
+
+var x = someFunc ()
+print (x)

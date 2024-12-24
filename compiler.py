@@ -12,7 +12,7 @@ cCode = ["#include <stdio.h>\n", "\n"]
 atrCommands = {"print": "printf"}
 
 #dictionary containing all variable format specifiers
-formatSpecifierTable = {"char": "c", "int": "i", "float": "f", "string": "s"}
+formatSpecifierTable = {"int": "i", "float": "f", "string": "s"}
 
 #the amount of spaces to use for indent in translated C code
 indentAmount = 4
@@ -20,9 +20,12 @@ indentAmount = 4
 #tuple of digits to check the format of a value when printing (special syntax required when printing numbers)
 digits = ("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")
 
+#list of math symbols to recognize when a value should be interpreted as math
+mathSigns = ("+", "-", "*", "/", "^")
+
 
 def readFunctionArguments(arguments: list[str]) -> str:
-    """Translates funnction names and arguments to C, returns just the arguments as a string since the function name is known."""
+    """Translates function arguments to C, returns the arguments as a single string."""
     functionCallArguments = ""
     for i in range(len(arguments)):
         functionCallArguments += arguments[i]
@@ -43,7 +46,7 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
     functions: list[str] = []
     finalCode: list[str] = []
     variableTypes: dict[str: str] = {}
-    definedFunctions: list[str] = []
+    definedFunctions: dict[str: str] = {"": ""}
 
     functionLineShift = 0 #lines in functions to be added to lineIndex
     targetIndex = 0
@@ -51,7 +54,6 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
     endFunction = False
 
     for lineIndex, line in enumerate(code):
-        currentIndex = lineIndex + functionLineShift
         if lineIndex < targetIndex: #skip lines already interpreted in recursive calls as functions
             continue
         splitLine = line.split(" ")
@@ -73,7 +75,7 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
             if currentCommand == "func":
                 functionName = splitLine[1]
                 argList = ""
-                for i in range(len(splitLine[2:-1])):
+                for i in range(len(splitLine[2:-3])): #skip over return type declaration and opening curely bracket with :-3
                     argList += splitLine[2+i]
                 
                 argList = argList.replace(")", "").replace("(", "").split(",") #this takes all the arguments in the brackets in .atr and splits them at commas
@@ -81,28 +83,27 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
                 dictArguments = {}
                 functionDefinition = "int {}(".format(functionName)
 
-                for i, argument in enumerate(argList):
-                    argumentName, argumentType = argument.replace(" ", "").split(":")
-                    stringArguments += argumentName
-                    
-                    dictArguments[argumentName] = argumentType
+                if argList[0]: #only search for arguments if there are any
+                    for i, argument in enumerate(argList):
+                        argumentName, argumentType = argument.replace(" ", "").split(":")
+                        stringArguments += argumentName
+                        
+                        dictArguments[argumentName] = argumentType
 
-                    if argumentType == "string":
-                        functionDefinition += "char {}[]".format(argumentName)
-                    else:
-                        functionDefinition += "{} {}".format(argumentType, argumentName)
+                        if argumentType == "string":
+                            functionDefinition += "char {}[]".format(argumentName)
+                        else:
+                            functionDefinition += "{} {}".format(argumentType, argumentName)
 
-                    if i != len(argList) - 1:
-                        stringArguments += ", " #append comma only if this isn't the last argument
-                        functionDefinition += ", "
-                    else:
-                        functionDefinition += ")"
+                        if i != len(argList) - 1:
+                            stringArguments += ", " #append comma only if this isn't the last argument
+                            functionDefinition += ", "
+                
+                functionDefinition += ")"
                 
                 functions.append(functionDefinition + " {\n")
-                print("new function defined: {}".format(functionName))
-                definedFunctions.append(functionName)
+                definedFunctions[functionName] = splitLine[-2]
                 _, functionCode, lineShift = interpret(code[lineIndex+1:], 1, arguments=dictArguments) #recursive call enables functions and loops to be interpreted easily
-                print("out of function interpret with lineshift {}. Current Index: {}".format(lineShift, lineIndex))
                 for functionLine in functionCode:
                     functions.append(functionLine)
                 functionLineShift += lineShift+2
@@ -111,8 +112,8 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
                 skipToNextLine = True
             
             if currentCommand == "}":
-                print("end of function")
                 endFunction = True
+                del finalCode[-1]
                 break
 
             if currentCommand == "return":
@@ -138,10 +139,7 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
                         varType = variableTypes[value]
                     
                     elif value.startswith(("\"", "'")):
-                        if len(value) == 3: #if length of value is 3 (including " or '), it's a character
-                            varType = "char"
-                        else:
-                            varType = "string"
+                        varType = "string"
                     elif value.startswith(digits + ("-",)):
                         if "." in value:
                             varType = "float"
@@ -153,29 +151,43 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
                 finalCode[-1] += value + ");\n"
                 skipToNextLine = True
         
-            elif currentCommand in definedFunctions:
-                print("found function {}".format(currentCommand))
+            elif currentCommand in definedFunctions.keys():
                 functionCallArguments = readFunctionArguments(splitLine[1:])
-                print(functionCallArguments)
                 finalCode[-1] += "{}({});\n".format(currentCommand, functionCallArguments)
                 skipToNextLine = True
 
-            elif currentCommand == "var" and splitLine[0].startswith("var"):
+            elif currentCommand == "var":
                 value = splitLine[3:]
                 finalValue = splitLine[3]
-                #in case the value to be assigned contained a space (for example in strings), keep adding the rest of the line together until the full value is reached
-                while len(value) > 1:
-                    finalValue += " " + value.pop(1)
+                #in case the value to be assigned contained a space (for example in strings or addition), keep adding the rest of the line together until the full value is reached, unless the first part was a recognized user-defined function
+                if not value[0] in definedFunctions.keys():
+                    while len(value) > 1:
+                        finalValue += " " + value.pop(1)
                 value = finalValue
                 varType = None
 
-                if value.startswith("\"") and len(value.replace("\"", "")) == 1:
-                    varType = "char"
+                if value in variableTypes.keys():
+                    varType = variableTypes[value]
+                
+                elif value in definedFunctions.keys():
+                    varType = definedFunctions[value]
+                    finalCode[-1] += "{} {} = {}".format(varType, splitLine[1], splitLine[3]+splitLine[4])
+                    print(finalCode[-1])
+
                 elif value.startswith("\""):
                     #there is a special syntax for "strings" in C, consisting of an array of char elements
                     finalCode[-1] += "char {}[] = {};\n".format(splitLine[1], value)
                     variableTypes[splitLine[1]] = "string" #C requires a format specifier for every variable to be printed correctly
                 
+                elif any((sign in value) for sign in mathSigns): #if there is any mathematical sign and the value isn't a string, interpret value as math
+                    pass
+                
+                elif value.startswith(digits) and not "." in value:
+                    if "." in value:
+                        varType = "float"
+                    else:
+                        varType = "int"
+
                 if varType:
                     finalCode[-1] += "{} {} = {};\n".format(varType, splitLine[1], value)
                     variableTypes[splitLine[1]] = varType
@@ -185,6 +197,8 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
             if skipToNextLine:
                 break
         
+        print(lineIndex, finalCode)
+        print("interpretation of line: \n{}".format(line))
         if not skipToNextLine:
             if len(finalCode[-1].replace(" ", "")) and ("}" not in finalCode[-1]): #if there was no (translatable) content on the line, do not add semicolon
                 finalCode[-1] += ";"
