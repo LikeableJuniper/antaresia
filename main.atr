@@ -5,5 +5,5 @@ func someFunc (firstArg: int, secondArg: int) {
     return -1
 }
 print ("hello")
-someFunc (3, 6)
+someFunc (3, 6, 7, 3, -2)
 print ("world")

@@ -9,7 +9,7 @@ int someFunc(int firstArg, int secondArg) {
     
 int main() {
     printf("%s\n", "hello");
-    someFunc(3,);
+    someFunc(3, 6);
     printf("%s\n", "world");
     return 0;
 }

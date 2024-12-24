@@ -21,6 +21,18 @@ indentAmount = 4
 digits = ("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")
 
 
+def readFunctionArguments(arguments: list[str]) -> str:
+    """Translates funnction names and arguments to C, returns just the arguments as a string since the function name is known."""
+    functionCallArguments = ""
+    for i in range(len(arguments)):
+        functionCallArguments += arguments[i]
+        if i < len(arguments)-1:
+            functionCallArguments += " "
+    
+    functionCallArguments = functionCallArguments.replace("(", "").replace(")", "")
+    return functionCallArguments
+
+
 def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[list[str], list[str], int]:
     global formatSpecifierTable
     """
@@ -143,8 +155,8 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
         
             elif currentCommand in definedFunctions:
                 print("found function {}".format(currentCommand))
-                functionCallArguments = splitLine[1].replace("(", "").replace(")", "")
-                #TODO: add all arguments when multiple are present
+                functionCallArguments = readFunctionArguments(splitLine[1:])
+                print(functionCallArguments)
                 finalCode[-1] += "{}({});\n".format(currentCommand, functionCallArguments)
                 skipToNextLine = True
 
