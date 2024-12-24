@@ -171,8 +171,9 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
                 
                 elif value in definedFunctions.keys():
                     varType = definedFunctions[value]
-                    finalCode[-1] += "{} {} = {}".format(varType, splitLine[1], splitLine[3]+splitLine[4])
-                    print(finalCode[-1])
+                    finalCode[-1] += "{} {} = {};\n".format(varType, splitLine[1], splitLine[3]+splitLine[4])
+                    print("After adding value: {}".format(finalCode[-1]))
+                    skipToNextLine = True
 
                 elif value.startswith("\""):
                     #there is a special syntax for "strings" in C, consisting of an array of char elements
@@ -188,7 +189,7 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
                     else:
                         varType = "int"
 
-                if varType:
+                if varType and not skipToNextLine:
                     finalCode[-1] += "{} {} = {};\n".format(varType, splitLine[1], value)
                     variableTypes[splitLine[1]] = varType
                 

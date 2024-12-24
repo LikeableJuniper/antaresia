@@ -9,7 +9,7 @@ int main() {
     ();
     ();
     ();
-    int x = someFunc()int x = someFunc;
+    int x = someFunc();
     printf("%i\n", x);
     return 0;
 }
