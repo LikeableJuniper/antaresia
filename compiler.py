@@ -60,7 +60,7 @@ def interpret(code: list[str], indent=0, definedVariables: dict[str: str]={}) ->
     recursiveLineShift = 0 #lines in functions to be added to lineIndex
     targetIndex = 0
 
-    endFunction = False
+    endInterpretation = False
 
     for lineIndex, line in enumerate(code):
         if lineIndex < targetIndex: #skip lines already interpreted in recursive calls as functions
@@ -83,10 +83,8 @@ def interpret(code: list[str], indent=0, definedVariables: dict[str: str]={}) ->
 
             if currentCommand == "if":
                 condition = ""
-                print(splitLine[1:-1])
                 for conditionPart in splitLine[1:-1]:
                     if conditionPart in atrBooleanOperators.keys():
-                        print(atrBooleanOperators[conditionPart])
                         condition += atrBooleanOperators[conditionPart] + ("" if conditionPart == "not" else " ") #append a space if the boolean operator is "and" or "or" since "not" usually stands before the value without a space
                     elif conditionPart in ["True", "False"]:
                         condition += "1" if conditionPart == "True" else "0" #C does not contain booleans as "true" and "false", instead they are treated as integers, 1 and 0
@@ -98,8 +96,8 @@ def interpret(code: list[str], indent=0, definedVariables: dict[str: str]={}) ->
                 _, statementCode, lineShift = interpret(code[lineIndex+1:], indent+1, definedVariables=addDicts(definedVariables, variableTypes)) #carry over newly defined variables as well as already defined ones
                 for statementLine in statementCode:
                     finalCode.append(statementLine)
-                finalCode.append(" "*indent*4 + "}")
-                recursiveLineShift += lineShift+2
+                print(statementCode, code[lineIndex+1:])
+                recursiveLineShift += lineShift+3
                 targetIndex = lineIndex + recursiveLineShift
                 skipToNextLine = True
 
@@ -138,20 +136,23 @@ def interpret(code: list[str], indent=0, definedVariables: dict[str: str]={}) ->
                 _, functionCode, lineShift = interpret(code[lineIndex+1:], 1, definedVariables=dictArguments) #recursive call enables functions and loops to be interpreted easily
                 for functionLine in functionCode:
                     functions.append(functionLine)
-                recursiveLineShift += lineShift+2
+                print(functionCode)
+                recursiveLineShift += lineShift+3
                 targetIndex = lineIndex + recursiveLineShift
                 del finalCode[-1] #since no line in main code is needed, remove already added indents
                 skipToNextLine = True
             
             if currentCommand == "}":
-                endFunction = True
+                endInterpretation = True
+                skipToNextLine = True
                 del finalCode[-1]
                 break
 
             if currentCommand == "return":
                 finalCode[-1] += "return {};\n".format(splitLine[1])
-                finalCode.append("}\n")
+                endInterpretation = True
                 skipToNextLine = True
+                break
 
             if currentCommand.startswith("#"): #skip comments
                 if splitLine[0].startswith("#"): #completely ignore line if it was a comment
@@ -238,7 +239,8 @@ def interpret(code: list[str], indent=0, definedVariables: dict[str: str]={}) ->
                 finalCode[-1] += ";"
             finalCode[-1] += "\n"
         
-        if endFunction:
+        if endInterpretation:
+            finalCode.append(" "*(indent-1)*4 + "}\n")
             break
     
     return functions, finalCode, lineIndex

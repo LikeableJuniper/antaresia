@@ -7,6 +7,8 @@
 var res = 3 + 5.0
 #print (res)
 
-if res == 3 and True {
-    print ("hello")
+if res == 3 {
+    if True {
+        print ("hello")
+    }
 }
