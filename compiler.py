@@ -11,6 +11,9 @@ cCode = ["#include <stdio.h>\n", "\n"]
 #dictionary assigning atr functions to their C counterparts
 atrCommands = {"print": "printf"}
 
+#dictionary assigning atr boolean operators to their C counterparts
+atrBooleanOperators = {"and": "&&", "or": "||", "not": "!"}
+
 #dictionary containing all variable format specifiers
 formatSpecifierTable = {"int": "i", "float": "f", "string": "s"}
 
@@ -35,8 +38,14 @@ def readFunctionArguments(arguments: list[str]) -> str:
     functionCallArguments = functionCallArguments.replace("(", "").replace(")", "")
     return functionCallArguments
 
+def addDicts(dict1: dict, dict2: dict):
+    for key, value in enumerate(dict2):
+        if not key in dict1:
+            dict1[key] = value
+    return dict1
 
-def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[list[str], list[str], int]:
+
+def interpret(code: list[str], indent=0, definedVariables: dict[str: str]={}) -> tuple[list[str], list[str], int]:
     global formatSpecifierTable
     """
     Compiles atr code to C code, taking in a list of strings, the lines of atr code, and returning lines of c code.
@@ -48,7 +57,7 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
     variableTypes: dict[str: str] = {}
     definedFunctions: dict[str: str] = {}
 
-    functionLineShift = 0 #lines in functions to be added to lineIndex
+    recursiveLineShift = 0 #lines in functions to be added to lineIndex
     targetIndex = 0
 
     endFunction = False
@@ -71,6 +80,28 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
                 splitLine[-1] = splitLine[-1][:-1]
 
             currentCommand = splitLine[splitIndex]
+
+            if currentCommand == "if":
+                condition = ""
+                print(splitLine[1:-1])
+                for conditionPart in splitLine[1:-1]:
+                    if conditionPart in atrBooleanOperators.keys():
+                        print(atrBooleanOperators[conditionPart])
+                        condition += atrBooleanOperators[conditionPart] + ("" if conditionPart == "not" else " ") #append a space if the boolean operator is "and" or "or" since "not" usually stands before the value without a space
+                    elif conditionPart in ["True", "False"]:
+                        condition += "1" if conditionPart == "True" else "0" #C does not contain booleans as "true" and "false", instead they are treated as integers, 1 and 0
+                    else:
+                        condition += conditionPart + " "
+                    
+                finalCode[-1] += "if ({}) ".format(condition) + "{\n"
+
+                _, statementCode, lineShift = interpret(code[lineIndex+1:], indent+1, definedVariables=addDicts(definedVariables, variableTypes)) #carry over newly defined variables as well as already defined ones
+                for statementLine in statementCode:
+                    finalCode.append(statementLine)
+                finalCode.append(" "*indent*4 + "}")
+                recursiveLineShift += lineShift+2
+                targetIndex = lineIndex + recursiveLineShift
+                skipToNextLine = True
 
             if currentCommand == "func":
                 functionName = splitLine[1]
@@ -104,11 +135,11 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
                 
                 functions.append(functionDefinition + " {\n")
                 definedFunctions[functionName] = splitLine[-2]
-                _, functionCode, lineShift = interpret(code[lineIndex+1:], 1, arguments=dictArguments) #recursive call enables functions and loops to be interpreted easily
+                _, functionCode, lineShift = interpret(code[lineIndex+1:], 1, definedVariables=dictArguments) #recursive call enables functions and loops to be interpreted easily
                 for functionLine in functionCode:
                     functions.append(functionLine)
-                functionLineShift += lineShift+2
-                targetIndex = lineIndex + functionLineShift
+                recursiveLineShift += lineShift+2
+                targetIndex = lineIndex + recursiveLineShift
                 del finalCode[-1] #since no line in main code is needed, remove already added indents
                 skipToNextLine = True
             
@@ -133,8 +164,8 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
                 value = line.replace(")", "(").split("(")[1] #get the parameter of the function
 
                 if currentCommand == "print":
-                    if value in arguments:
-                        varType = arguments[value]
+                    if value in definedVariables:
+                        varType = definedVariables[value]
 
                     elif value in variableTypes:
                         varType = variableTypes[value]
@@ -184,7 +215,8 @@ def interpret(code: list[str], indent=0, arguments: dict[str: str]={}) -> tuple[
                     variableTypes[splitLine[1]] = "string" #C requires a format specifier for every variable to be printed correctly
                 
                 elif any((sign in value) for sign in mathSigns): #if there is any mathematical sign and the value isn't a string, interpret value as math
-                    pass
+                    finalCode[-1] += "float {} = {};\n".format(splitLine[1], value)
+                    variableTypes[splitLine[1]] = "float" #convert any mathematical operation to float since it's easier to always assume a float and integers can be displayed as x.0
                 
                 elif value.startswith(digits):
                     if "." in value:

@@ -1,6 +1,12 @@
-func someFunc () -> float {
-    var res = 3.5
-    return res
+#func someFunc () -> float {
+#    var res = 3.5
+#    return res
+#}
+#var x = someFunc ()
+#print (x)
+var res = 3 + 5.0
+#print (res)
+
+if res == 3 and True {
+    print ("hello")
 }
-var x = someFunc ()
-print (x)

@@ -1,12 +1,10 @@
 #include <stdio.h>
 
-float someFunc() {
-    float res = 3.5;
-    return res;
-}
-
 int main() {
-    float x = someFunc();
-    printf("%f\n", x);
-    return 0;
+    float res = 3 + 5.0;
+    
+    if (res == 3 && 1) {
+        printf("%s\n", "hello");
+;
+    }    return 0;
 }
