@@ -96,7 +96,6 @@ def interpret(code: list[str], indent=0, definedVariables: dict[str: str]={}) ->
                 _, statementCode, lineShift = interpret(code[lineIndex+1:], indent+1, definedVariables=addDicts(definedVariables, variableTypes)) #carry over newly defined variables as well as already defined ones
                 for statementLine in statementCode:
                     finalCode.append(statementLine)
-                print(statementCode, code[lineIndex+1:])
                 recursiveLineShift += lineShift+3
                 targetIndex = lineIndex + recursiveLineShift
                 skipToNextLine = True
