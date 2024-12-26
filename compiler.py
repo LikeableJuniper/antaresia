@@ -137,7 +137,7 @@ def interpret(code: list[str], indent=0, definedVariables: dict[str: str]={}) ->
                 condition = ""
                 for conditionPart in splitLine[1:-1]:
                     if conditionPart in atrBooleanOperators.keys():
-                        condition += atrBooleanOperators[conditionPart] + ("" if conditionPart == "not" else " ") #append a space if the boolean operator is "and" or "or" since "not" usually stands before the value without a space
+                        condition += atrBooleanOperators[conditionPart] + ("" if conditionPart == "not" else " ") #append a space if the boolean operator is "and"(&&) or "or"(||) since "not"(!) usually comes before the value without a space
                     elif conditionPart in ["True", "False"]:
                         condition += "1" if conditionPart == "True" else "0" #C does not contain booleans as "true" and "false", instead they are treated as integers, 1 and 0
                     else:
@@ -149,14 +149,31 @@ def interpret(code: list[str], indent=0, definedVariables: dict[str: str]={}) ->
                 for statementLine in statementCode:
                     finalCode.append(statementLine)
                 
-                if indent == 1:
-                    print(finalCode)
                 recursiveLineShift += lineShift+2
                 targetIndex = lineIndex + recursiveLineShift
                 skipToNextLine = True
 
             if currentCommand == "while":
-                pass
+                condition = ""
+                for conditionPart in splitLine[1:-1]:
+                    if conditionPart in atrBooleanOperators.keys():
+                        condition += atrBooleanOperators[conditionPart] + ("" if conditionPart == "not" else " ") #append a space if the boolean operator is "and"(&&) or "or"(||) since "not"(!) usually comes before the value without a space
+                    elif conditionPart in ["True", "False"]:
+                        condition += "1" if conditionPart == "True" else "0" #C does not contain booleans as "true" and "false", instead they are treated as integers, 1 and 0
+                    else:
+                        condition += conditionPart + " "
+                
+                condition = condition[:-1] #remove space at the end
+                    
+                finalCode[-1] += "while ({}) ".format(condition) + "{\n"
+
+                _, loopCode, lineShift = interpret(code[lineIndex+1:], indent+1, definedVariables=addDicts(definedVariables, variableTypes)) #carry over newly defined variables as well as already defined ones
+                for loopLine in loopCode:
+                    finalCode.append(loopLine)
+                
+                recursiveLineShift += lineShift+2
+                targetIndex = lineIndex + recursiveLineShift
+                skipToNextLine = True
 
             if currentCommand == "func":
                 functionName = splitLine[1]
@@ -254,7 +271,6 @@ def interpret(code: list[str], indent=0, definedVariables: dict[str: str]={}) ->
 
             elif currentCommand in definedVariables.keys():
                 reDefinition, _, _ = readVariableDefinition(variableTypes, definedFunctions, splitLine, expectVarKeyword=False)
-                print(reDefinition)
                 reDefinition = reDefinition.split(" ")[1:] #remove type redeclaration since C does not accept redefinitions of the same variable
                 definitionNoType = ""
                 for definitionPart in reDefinition:
@@ -262,7 +278,6 @@ def interpret(code: list[str], indent=0, definedVariables: dict[str: str]={}) ->
 
                 definitionNoType = definitionNoType[:-1]
                 finalCode[-1] += definitionNoType
-                print(finalCode)
                 skipToNextLine = True
 
             if skipToNextLine:
