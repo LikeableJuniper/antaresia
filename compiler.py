@@ -38,11 +38,63 @@ def readFunctionArguments(arguments: list[str]) -> str:
     functionCallArguments = functionCallArguments.replace("(", "").replace(")", "")
     return functionCallArguments
 
+
 def addDicts(dict1: dict, dict2: dict):
     for key, value in enumerate(dict2):
         if not key in dict1:
             dict1[key] = value
     return dict1
+
+
+def readVariableDefinition(variableTypes: dict, definedFunctions: dict, splitLine: list[str], expectVarKeyword=True):
+    result = ""
+    if not expectVarKeyword:
+        splitLineShift = -1
+    else:
+        splitLineShift = 0
+
+    varName = splitLine[1+splitLineShift]
+    value = splitLine[3+splitLineShift:]
+    finalValue = splitLine[3+splitLineShift]
+                #in case the value to be assigned contained a space (for example in strings or addition), keep adding the rest of the line together until the full value is reached, unless the first part was a recognized user-defined function
+    if not value[0] in definedFunctions.keys():
+        while len(value) > 1:
+            finalValue += " " + value.pop(1)
+    value = finalValue
+    varType = None
+
+    if value in variableTypes.keys():
+        varType = variableTypes[value]
+                
+    elif value in definedFunctions.keys():
+        varType = definedFunctions[value]
+        if varType == "string":
+            result = "char {}[] = {};\n".format(splitLine[1+splitLineShift], splitLine[3+splitLineShift]+splitLine[4+splitLineShift])
+        else:
+            result = "{} {} = {};\n".format(varType, splitLine[1+splitLineShift], splitLine[3+splitLineShift]+splitLine[4+splitLineShift])
+        return result, varName, varType
+
+    elif value.startswith("\""):
+        #there is a special syntax for "strings" in C, consisting of an array of char elements
+        result = "char {}[] = {};\n".format(varName, value)
+        variableTypes[varName] = "string" #C requires a format specifier for every variable to be printed correctly
+                
+    elif any((sign in value) for sign in mathSigns): #if there is any mathematical sign and the value isn't a string, interpret value as math
+        result = "float {} = {};\n".format(varName, value)
+        variableTypes[varName] = "float" #convert any mathematical operation to float since it's easier to always assume a float and integers can be displayed as x.0
+                
+    elif value.startswith(digits):
+        if "." in value:
+            varType = "float"
+        else:
+            varType = "int"
+
+    if varType:
+        result = "{} {} = {};\n".format(varType, varName, value)
+        variableTypes[varName] = varType
+    
+    return result, varName, varType
+
 
 
 def interpret(code: list[str], indent=0, definedVariables: dict[str: str]={}) -> tuple[list[str], list[str], int]:
@@ -195,45 +247,21 @@ def interpret(code: list[str], indent=0, definedVariables: dict[str: str]={}) ->
                 skipToNextLine = True
 
             elif currentCommand == "var":
-                value = splitLine[3:]
-                finalValue = splitLine[3]
-                #in case the value to be assigned contained a space (for example in strings or addition), keep adding the rest of the line together until the full value is reached, unless the first part was a recognized user-defined function
-                if not value[0] in definedFunctions.keys():
-                    while len(value) > 1:
-                        finalValue += " " + value.pop(1)
-                value = finalValue
-                varType = None
+                definition, varName, varType = readVariableDefinition(variableTypes, definedFunctions, splitLine)
+                finalCode[-1] += definition
+                definedVariables[varName] = varType
+                skipToNextLine = True
 
-                if value in variableTypes.keys():
-                    varType = variableTypes[value]
+            elif currentCommand in definedVariables.keys():
+                reDefinition, _, _ = readVariableDefinition(variableTypes, definedFunctions, splitLine, expectVarKeyword=False)
+                print(reDefinition)
+                reDefinition = reDefinition.split(" ")[1:] #remove type redeclaration since C does not accept redefinitions of the same variable
+                definitionNoType = ""
+                for definitionPart in reDefinition:
+                    definitionNoType += definitionPart + " "
                 
-                elif value in definedFunctions.keys():
-                    varType = definedFunctions[value]
-                    if varType == "string":
-                        finalCode[-1] += "char {}[] = {};\n".format(splitLine[1], splitLine[3]+splitLine[4])
-                    else:
-                        finalCode[-1] += "{} {} = {};\n".format(varType, splitLine[1], splitLine[3]+splitLine[4])
-                    skipToNextLine = True
-
-                elif value.startswith("\""):
-                    #there is a special syntax for "strings" in C, consisting of an array of char elements
-                    finalCode[-1] += "char {}[] = {};\n".format(splitLine[1], value)
-                    variableTypes[splitLine[1]] = "string" #C requires a format specifier for every variable to be printed correctly
-                
-                elif any((sign in value) for sign in mathSigns): #if there is any mathematical sign and the value isn't a string, interpret value as math
-                    finalCode[-1] += "float {} = {};\n".format(splitLine[1], value)
-                    variableTypes[splitLine[1]] = "float" #convert any mathematical operation to float since it's easier to always assume a float and integers can be displayed as x.0
-                
-                elif value.startswith(digits):
-                    if "." in value:
-                        varType = "float"
-                    else:
-                        varType = "int"
-
-                if varType and not skipToNextLine:
-                    finalCode[-1] += "{} {} = {};\n".format(varType, splitLine[1], value)
-                    variableTypes[splitLine[1]] = varType
-                
+                print(reDefinition)
+                finalCode[-1] += definitionNoType
                 skipToNextLine = True
 
             if skipToNextLine:

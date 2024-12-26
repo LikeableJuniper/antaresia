@@ -4,12 +4,12 @@
 #}
 #var x = someFunc ()
 #print (x)
-var res = 3 + 5
+#var res = 3 + 5
 #print (res)
-if res == 3 {
-    print ("hello")
-}
-#var i = 0
-#while (i < 0, i++) {
-
+#if res == 3 {
+#    print ("hello")
+#}
+var i = 0
+i = i + 1
+#while (i < 0) {
 #}
