@@ -96,9 +96,15 @@ def interpret(code: list[str], indent=0, definedVariables: dict[str: str]={}) ->
                 _, statementCode, lineShift = interpret(code[lineIndex+1:], indent+1, definedVariables=addDicts(definedVariables, variableTypes)) #carry over newly defined variables as well as already defined ones
                 for statementLine in statementCode:
                     finalCode.append(statementLine)
-                recursiveLineShift += lineShift+3
+                
+                if indent == 1:
+                    print(finalCode)
+                recursiveLineShift += lineShift+2
                 targetIndex = lineIndex + recursiveLineShift
                 skipToNextLine = True
+
+            if currentCommand == "while":
+                pass
 
             if currentCommand == "func":
                 functionName = splitLine[1]
@@ -140,7 +146,7 @@ def interpret(code: list[str], indent=0, definedVariables: dict[str: str]={}) ->
                 targetIndex = lineIndex + recursiveLineShift
                 del finalCode[-1] #since no line in main code is needed, remove already added indents
                 skipToNextLine = True
-            
+
             if currentCommand == "}":
                 endInterpretation = True
                 skipToNextLine = True
