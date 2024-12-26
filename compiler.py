@@ -259,9 +259,10 @@ def interpret(code: list[str], indent=0, definedVariables: dict[str: str]={}) ->
                 definitionNoType = ""
                 for definitionPart in reDefinition:
                     definitionNoType += definitionPart + " "
-                
-                print(reDefinition)
+
+                definitionNoType = definitionNoType[:-1]
                 finalCode[-1] += definitionNoType
+                print(finalCode)
                 skipToNextLine = True
 
             if skipToNextLine:
