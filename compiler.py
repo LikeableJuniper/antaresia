@@ -96,7 +96,6 @@ def readVariableDefinition(variableTypes: dict, definedFunctions: dict, splitLin
     return result, varName, varType
 
 
-
 def interpret(code: list[str], indent=0, definedVariables: dict[str: str]={}) -> tuple[list[str], list[str], int]:
     global formatSpecifierTable
     """
