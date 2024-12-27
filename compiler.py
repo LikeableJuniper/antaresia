@@ -95,7 +95,9 @@ def readVariableDefinition(variableTypes: dict, definedFunctions: dict, splitLin
     return result, varName, varType
 
 
-def interpretRecursively(code: list[str], indent: int, definedVariables: dict[str: str], variableTypes: dict[str: str], lineIndex: int, splitLine: list[str], recursiveType: str="if") -> tuple[list[str], int]:
+def interpretRecursively(code: list[str], indent: int, definedVariables: dict[str: str],\
+        variableTypes: dict[str: str], lineIndex: int, splitLine: list[str],\
+        recursiveType: str="if") -> tuple[list[str], int]:
     """Recursively interpret code, used in if-statements and while-loops."""
     result = []
     condition = ""
@@ -109,7 +111,8 @@ def interpretRecursively(code: list[str], indent: int, definedVariables: dict[st
                 
     result.append("{} ({}) ".format(recursiveType, condition) + "{\n")
                 
-    _, statementCode, lineShift = interpret(code[lineIndex+1:], indent+1, definedVariables=addDicts(definedVariables, variableTypes))
+    _, statementCode, lineShift = interpret(code[lineIndex+1:], indent+1,\
+            definedVariables=addDicts(definedVariables, variableTypes))
     for statementLine in statementCode:
         result.append(statementLine)
     return result, lineShift
