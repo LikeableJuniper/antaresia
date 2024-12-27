@@ -12,7 +12,7 @@ cCode = ["#include <stdio.h>\n", "\n"]
 atrCommands = {"print": "printf"}
 
 #dictionary assigning atr boolean operators to their C counterparts
-atrBooleanOperators = {"and": "&&", "or": "||", "not": "!"}
+atrBooleanOperators = {"and": "&&", "or": "||", "not": "!", "True": "1", "False": "0"}
 
 #dictionary containing all variable format specifiers
 formatSpecifierTable = {"int": "i", "float": "f", "string": "s"}
@@ -56,7 +56,7 @@ def readVariableDefinition(variableTypes: dict, definedFunctions: dict, splitLin
     varName = splitLine[1+splitLineShift]
     value = splitLine[3+splitLineShift:]
     finalValue = splitLine[3+splitLineShift]
-                #in case the value to be assigned contained a space (for example in strings or addition), keep adding the rest of the line together until the full value is reached, unless the first part was a recognized user-defined function
+    #in case the value to be assigned contained a space (for example in strings or addition), keep adding the rest of the line together until the full value is reached, unless the first part was a recognized user-defined function
     if not value[0] in definedFunctions.keys():
         while len(value) > 1:
             finalValue += " " + value.pop(1)

@@ -1,7 +1,7 @@
-#func someFunc () -> float {
-#    var res = 3.5
-#    return res
-#}
+func someFunc (firstArg: int) -> float {
+    var res = 3.5
+    return res
+}
 #var x = someFunc ()
 #print (x)
 #var res = 3 + 5
