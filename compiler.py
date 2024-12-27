@@ -7,7 +7,6 @@ instantCompile = False
 #the base code structure for any C code
 cCode = ["#include <stdio.h>\n", "\n"]
 
-
 #dictionary assigning atr functions to their C counterparts
 atrCommands = {"print": "printf"}
 
@@ -96,6 +95,26 @@ def readVariableDefinition(variableTypes: dict, definedFunctions: dict, splitLin
     return result, varName, varType
 
 
+def interpretRecursively(code: list[str], indent: int, definedVariables: dict[str: str], variableTypes: dict[str: str], lineIndex: int, splitLine: list[str], recursiveType: str="if") -> tuple[list[str], int]:
+    """Recursively interpret code, used in if-statements and while-loops."""
+    result = []
+    condition = ""
+    for conditionPart in splitLine[1:-1]:
+        if conditionPart in atrBooleanOperators.keys():
+            condition += atrBooleanOperators[conditionPart] + ("" if conditionPart == "not" else " ")
+        else:
+            condition += conditionPart + " "
+                
+    condition = condition[:-1]
+                
+    result.append("{} ({}) ".format(recursiveType, condition) + "{\n")
+                
+    _, statementCode, lineShift = interpret(code[lineIndex+1:], indent+1, definedVariables=addDicts(definedVariables, variableTypes))
+    for statementLine in statementCode:
+        result.append(statementLine)
+    return result, lineShift
+
+
 def interpret(code: list[str], indent=0, definedVariables: dict[str: str]={}) -> tuple[list[str], list[str], int]:
     global formatSpecifierTable
     """
@@ -133,43 +152,19 @@ def interpret(code: list[str], indent=0, definedVariables: dict[str: str]={}) ->
             currentCommand = splitLine[splitIndex]
 
             if currentCommand == "if":
-                condition = ""
-                for conditionPart in splitLine[1:-1]:
-                    if conditionPart in atrBooleanOperators.keys():
-                        condition += atrBooleanOperators[conditionPart] + ("" if conditionPart == "not" else " ") #append a space if the boolean operator is "and"(&&) or "or"(||) since "not"(!) usually comes before the value without a space
-                    elif conditionPart in ["True", "False"]:
-                        condition += "1" if conditionPart == "True" else "0" #C does not contain booleans as "true" and "false", instead they are treated as integers, 1 and 0
-                    else:
-                        condition += conditionPart + " "
-                    
-                finalCode[-1] += "if ({}) ".format(condition) + "{\n"
-
-                _, statementCode, lineShift = interpret(code[lineIndex+1:], indent+1, definedVariables=addDicts(definedVariables, variableTypes)) #carry over newly defined variables as well as already defined ones
-                for statementLine in statementCode:
+                statementCode, lineShift = interpretRecursively(code, indent, definedVariables, variableTypes, lineIndex, splitLine, recursiveType="if")
+                finalCode[-1] += statementCode[0]
+                for statementLine in statementCode[1:]:
                     finalCode.append(statementLine)
-                
                 recursiveLineShift += lineShift+2
                 targetIndex = lineIndex + recursiveLineShift
                 skipToNextLine = True
 
             if currentCommand == "while":
-                condition = ""
-                for conditionPart in splitLine[1:-1]:
-                    if conditionPart in atrBooleanOperators.keys():
-                        condition += atrBooleanOperators[conditionPart] + ("" if conditionPart == "not" else " ") #append a space if the boolean operator is "and"(&&) or "or"(||) since "not"(!) usually comes before the value without a space
-                    elif conditionPart in ["True", "False"]:
-                        condition += "1" if conditionPart == "True" else "0" #C does not contain booleans as "true" and "false", instead they are treated as integers, 1 and 0
-                    else:
-                        condition += conditionPart + " "
-                
-                condition = condition[:-1] #remove space at the end
-                    
-                finalCode[-1] += "while ({}) ".format(condition) + "{\n"
-
-                _, loopCode, lineShift = interpret(code[lineIndex+1:], indent+1, definedVariables=addDicts(definedVariables, variableTypes)) #carry over newly defined variables as well as already defined ones
-                for loopLine in loopCode:
+                loopCode, lineShift = interpretRecursively(code, indent, definedVariables, variableTypes, lineIndex, splitLine, recursiveType="while")
+                finalCode[-1] += loopCode[0]
+                for loopLine in loopCode[1:]:
                     finalCode.append(loopLine)
-                
                 recursiveLineShift += lineShift+2
                 targetIndex = lineIndex + recursiveLineShift
                 skipToNextLine = True
@@ -209,7 +204,6 @@ def interpret(code: list[str], indent=0, definedVariables: dict[str: str]={}) ->
                 _, functionCode, lineShift = interpret(code[lineIndex+1:], 1, definedVariables=dictArguments) #recursive call enables functions and loops to be interpreted easily
                 for functionLine in functionCode:
                     functions.append(functionLine)
-                print(functionCode)
                 recursiveLineShift += lineShift+3
                 targetIndex = lineIndex + recursiveLineShift
                 del finalCode[-1] #since no line in main code is needed, remove already added indents
@@ -301,7 +295,6 @@ with open("main.atr", "r") as f:
     cCode += functions
     cCode += "int main() {\n"
     cCode += interpretedLines
-        
 
 cCode += ["""    return 0;\n}\n"""]
 
