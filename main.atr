@@ -1,14 +1,18 @@
-#func someFunc (firstArg: int, secondArg: int) -> float {
-#    var res = firstArg + secondArg
-#    return res
-#}
-#var x = someFunc ()
-#print (x)
-#var res = 3 + 5
-#print (res)
-#if res == 3 {
-#    print ("hello")
-#}
+func someFunc (firstArg: int, secondArg: int) -> float {
+    var res = firstArg + secondArg
+    return res
+}
+
+var x = someFunc (3, -4)
+print (x)
+
+var res = 3 + 5
+print (res)
+
+if res == 8 {
+    print ("hello")
+}
+
 var i = 5
 while i > 0 {
     print (i)

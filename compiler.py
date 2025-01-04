@@ -59,16 +59,20 @@ def readVariableDefinition(variableTypes: dict, definedFunctions: dict, splitLin
     if not value[0] in definedFunctions.keys():
         while len(value) > 1:
             finalValue += " " + value.pop(1)
+    else:
+        for i, definitionPart in enumerate(value[1:]):
+            finalValue += ("" if i == 0 else " ") + definitionPart
+
     value = finalValue
     varType = None
 
     if value in variableTypes.keys():
         varType = variableTypes[value]
-                
+    
     elif value in definedFunctions.keys():
         varType = definedFunctions[value]
         if varType == "string":
-            result = "char {}[] = {};\n".format(splitLine[1+splitLineShift], splitLine[3+splitLineShift]+splitLine[4+splitLineShift])
+            result = "char {}[] = {};\n".format(varName, splitLine[3+splitLineShift]+splitLine[4+splitLineShift])
         else:
             result = "{} {} = {};\n".format(varType, splitLine[1+splitLineShift], splitLine[3+splitLineShift]+splitLine[4+splitLineShift])
         return result, varName, varType
@@ -76,11 +80,11 @@ def readVariableDefinition(variableTypes: dict, definedFunctions: dict, splitLin
     elif value.startswith("\""):
         #there is a special syntax for "strings" in C, consisting of an array of char elements
         result = "char {}[] = {};\n".format(varName, value)
-        variableTypes[varName] = "string" #C requires a format specifier for every variable to be printed correctly
-                
+        varType = "string" #C requires a format specifier for every variable to be printed correctly
+    
     elif any((sign in value) for sign in mathSigns): #if there is any mathematical sign and the value isn't a string, interpret value as math
         result = "float {} = {};\n".format(varName, value)
-        variableTypes[varName] = "float" #convert any mathematical operation to float since it's easier to always assume a float and integers can be displayed as x.0
+        varType = "float" #convert any mathematical operation to float since it's easier to always assume a float and integers can be displayed as x.0
                 
     elif value.startswith(digits):
         if "." in value:
@@ -90,14 +94,11 @@ def readVariableDefinition(variableTypes: dict, definedFunctions: dict, splitLin
 
     if varType:
         result = "{} {} = {};\n".format(varType, varName, value)
-        variableTypes[varName] = varType
     
     return result, varName, varType
 
 
-def interpretRecursively(code: list[str], indent: int, definedVariables: dict[str: str],\
-        variableTypes: dict[str: str], lineIndex: int, splitLine: list[str],\
-        recursiveType: str="if") -> tuple[list[str], int]:
+def interpretRecursively(code: list[str], indent: int, definedVariables: dict[str: str], variableTypes: dict[str: str], lineIndex: int, splitLine: list[str], recursiveType: str="if") -> tuple[list[str], int]:
     """Recursively interpret code, used in if-statements and while-loops."""
     result = []
     condition = ""
@@ -115,6 +116,7 @@ def interpretRecursively(code: list[str], indent: int, definedVariables: dict[st
             definedVariables=addDicts(definedVariables, variableTypes))
     for statementLine in statementCode:
         result.append(statementLine)
+    
     return result, lineShift
 
 
@@ -153,13 +155,14 @@ def interpret(code: list[str], indent=0, definedVariables: dict[str: str]={}) ->
                 splitLine[-1] = splitLine[-1][:-1]
 
             currentCommand = splitLine[splitIndex]
+            #print(currentCommand)
 
             if currentCommand == "if":
                 statementCode, lineShift = interpretRecursively(code, indent, definedVariables, variableTypes, lineIndex, splitLine, recursiveType="if")
                 finalCode[-1] += statementCode[0]
                 for statementLine in statementCode[1:]:
                     finalCode.append(statementLine)
-                recursiveLineShift += lineShift+2
+                recursiveLineShift = lineShift+2
                 targetIndex = lineIndex + recursiveLineShift
                 skipToNextLine = True
 
@@ -168,7 +171,7 @@ def interpret(code: list[str], indent=0, definedVariables: dict[str: str]={}) ->
                 finalCode[-1] += loopCode[0]
                 for loopLine in loopCode[1:]:
                     finalCode.append(loopLine)
-                recursiveLineShift += lineShift+2
+                recursiveLineShift = lineShift+2
                 targetIndex = lineIndex + recursiveLineShift
                 skipToNextLine = True
 
@@ -207,7 +210,7 @@ def interpret(code: list[str], indent=0, definedVariables: dict[str: str]={}) ->
                 _, functionCode, lineShift = interpret(code[lineIndex+1:], 1, definedVariables=dictArguments) #recursive call enables functions and loops to be interpreted easily
                 for functionLine in functionCode:
                     functions.append(functionLine)
-                recursiveLineShift += lineShift+3
+                recursiveLineShift = lineShift+3
                 targetIndex = lineIndex + recursiveLineShift
                 del finalCode[-1] #since no line in main code is needed, remove already added indents
                 skipToNextLine = True
