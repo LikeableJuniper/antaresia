@@ -155,7 +155,6 @@ def interpret(code: list[str], indent=0, definedVariables: dict[str: str]={}) ->
                 splitLine[-1] = splitLine[-1][:-1]
 
             currentCommand = splitLine[splitIndex]
-            #print(currentCommand)
 
             if currentCommand == "if":
                 statementCode, lineShift = interpretRecursively(code, indent, definedVariables, variableTypes, lineIndex, splitLine, recursiveType="if")
@@ -178,7 +177,7 @@ def interpret(code: list[str], indent=0, definedVariables: dict[str: str]={}) ->
             if currentCommand == "func":
                 functionName = splitLine[1]
                 argList = ""
-                for i in range(len(splitLine[2:-3])): #skip over return type declaration and opening curely bracket with :-3
+                for i in range(len(splitLine[2:-3])): #skip over return type declaration and opening curly bracket with :-3
                     argList += splitLine[2+i]
                 
                 argList = argList.replace(")", "").replace("(", "").split(",") #this takes all the arguments in the brackets in .atr and splits them at commas
@@ -228,7 +227,7 @@ def interpret(code: list[str], indent=0, definedVariables: dict[str: str]={}) ->
                 break
 
             if currentCommand.startswith("#"): #skip comments
-                if splitLine[0].startswith("#"): #completely ignore line if it was a comment
+                if splitLine[0].startswith("#"):
                     skipToNextLine = True
                     finalCode.pop()
                 break
